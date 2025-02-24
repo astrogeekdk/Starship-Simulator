@@ -22,6 +22,8 @@ Video demo coming soon as soon as the first basic version works!
 
 Clone the repo, and start a web server either with npx or python.
 
+## Progress 
+
 - [x] Basic launch and separation animation
 - [ ] Booster return and catch sequence
 - [ ] Ship orbiting
