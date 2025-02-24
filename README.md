@@ -22,3 +22,16 @@ Video demo coming soon as soon as the first basic version works!
 
 Clone the repo, and start a web server either with npx or python.
 
+- [x] Basic launch and separation animation
+- [ ] Booster return and catch sequence
+- [ ] Ship orbiting
+- [ ] Gamify booster catch
+- [ ] Realistic Physics
+- [ ] Sound effects and beautification (maybe)
+
+
+## Contributing
+
+I'm just working on this for learning purposes and most importantly because I'm obsesses by Starship, yes! 
+
+
