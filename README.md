@@ -34,4 +34,4 @@ Clone the repo, and start a web server either with npx or python.
 
 I'm just working on this for learning purposes and most importantly because I'm obsesses by Starship, yes! 
 
-
+If you would like to contribute, just feel free to! Fork, open an issue, or maybe submit a pull request. 
