@@ -8,3 +8,17 @@ And yeah, it turns into a game after stage seperation, where you can maneuver an
 
 Note: This project is still under progress and major features are still pending to be implemented.
 
+
+## Features
+- 3D Animation: Watch the Starship launch, separate, orbit, and return in a fully animated sequence.
+- Control The Booster: After stage separation, take manual control to land the booster.
+- Realisitic Physics (Work In Progress): Aim to simulate basic orbital mechanics and landing dynamics.
+- Built with Three.js: Leverages WebGL for smooth, browser-based 3D rendering.
+
+## Demo
+Video demo coming soon as soon as the first basic version works!
+
+## Installation
+
+Clone the repo, and start a web server either with npx or python.
+
