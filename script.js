@@ -6,10 +6,24 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 10000);
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100000000);
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.getElementById('container').appendChild(renderer.domElement);
+
+const textureLoader = new THREE.TextureLoader();
+
+const skyR = 1000000; 
+const skyGeom = new THREE.SphereGeometry(skyR, 64, 64);
+const skyTexture = textureLoader.load('starmap.png');
+const skyMaterial = new THREE.MeshPhongMaterial({
+    map: skyTexture,
+    side: THREE.DoubleSide,
+});
+const sky = new THREE.Mesh(skyGeom, skyMaterial);
+sky.position.set(0, 0, 0);
+scene.add(sky);
+
 
 const controls = new OrbitControls( camera, renderer.domElement );
 controls.enableDamping = true;
@@ -19,30 +33,19 @@ const world = new CANNON.World();
 world.gravity.set(0, 0, 0); 
 
 
-const rocketGeometry = new THREE.CylinderGeometry(0.01, 0.01, 0.1, 32);
-const rocketMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-const rocketMesh = new THREE.Mesh(rocketGeometry, rocketMaterial);
-scene.add(rocketMesh);
-
-
-const rocketShape = new CANNON.Cylinder(0.01, 0.01, 0.1, 32);
-const rocketBody = new CANNON.Body({
-    mass: 5000e3,
-    position: new CANNON.Vec3(0, 1, 0)
-});
-rocketBody.addShape(rocketShape);
-world.addBody(rocketBody);
-
-
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.05);
 scene.add(ambientLight);
+
+const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+directionalLight.position.set(10, 10, 10);
+scene.add(directionalLight);
+
 
 
 const earthRadius = 6371; 
 const earthMass = 5.972e24; 
 const G = 6.6743e-20;
 
-const textureLoader = new THREE.TextureLoader();
 const earthTexture = textureLoader.load('earth_day.jpg')
 const earthMaterial = new THREE.MeshPhongMaterial({
     map: earthTexture,
@@ -70,8 +73,74 @@ earthMesh.rotateY(THREE.MathUtils.degToRad(-9))
 
 
 
-camera.position.copy(rocketMesh.position).add(new THREE.Vector3(0, 0.2, 0.2));
-camera.lookAt(rocketMesh.position);
+// const rocketGeometry = new THREE.CylinderGeometry(0.01, 0.01, 0.1, 32);
+// const rocketMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+// const rocketMesh = new THREE.Mesh(rocketGeometry, rocketMaterial);
+// scene.add(rocketMesh);
+
+
+// const rocketShape = new CANNON.Cylinder(0.01, 0.01, 0.1, 32);
+// const rocketBody = new CANNON.Body({
+//     mass: 5000e3,
+//     position: new CANNON.Vec3(0, 1, 0)
+// });
+// rocketBody.addShape(rocketShape);
+// world.addBody(rocketBody);
+
+const starshipShape = new CANNON.Cylinder(0.01, 0.01, 0.1, 32);
+const rocketBody = new CANNON.Body({
+    mass: 5000e3,
+    position: new CANNON.Vec3(0, 1, 0)
+});
+rocketBody.addShape(starshipShape)
+world.addBody(rocketBody);  
+
+const loader = new GLTFLoader();
+
+
+let ship, booster;
+
+
+loader.load('booster.glb', (gltf) => {
+    booster = gltf.scene;
+    scene.add(booster);
+
+
+
+    booster.scale.set(0.01, 0.01, 0.01);
+
+    const box = new THREE.Box3().setFromObject(booster);
+    let boosterHeight = box.max.y - box.min.y;
+
+    booster.position.set(0, 1, 0);
+
+    loader.load('ship.glb', (gltf) => {
+        ship = gltf.scene;
+        scene.add(ship);
+
+        const shipBox = new THREE.Box3().setFromObject(ship);
+        let shipHeight = shipBox.max.y - shipBox.min.y;
+
+        ship.scale.set(0.01, 0.01, 0.01);
+
+        ship.position.set(0, 1+boosterHeight, 0);
+
+        const totalHeight = boosterHeight + shipHeight;
+
+        camera.position.copy(ship.position).add(new THREE.Vector3(0, 0.2, 0.2));
+        camera.lookAt(ship.position);
+    
+        
+    });
+});
+
+
+
+
+
+
+
+
 
 
 let time = 0;
@@ -83,6 +152,7 @@ function animate() {
 
     time += 1/1;
 
+    booster.visible = false;
     // Calculate gravitational force
     const rVec = rocketBody.position.vsub(earthBody.position); // Vector from Earth to rocket
     const distance = rVec.norm(); // Distance between centers
@@ -105,12 +175,7 @@ function animate() {
     const angleToRadial = Math.acos(dotProduct) * (180 / Math.PI); // Degrees
     const angleToTangent = 90 - angleToRadial; // Angle to desired perpendicular
     console.log(angleToTangent);
-    // // Roll until perpendicular
-    // if (time > 50 && Math.abs(angleToTangent) > 5) { // Start rolling after 50s, stop near 90°
-    //     const rollTorque = new CANNON.Vec3(0, 0, 5000); // Torque around z-axis (adjust magnitude)
-    //     rocketBody.torque.vadd(rollTorque, rocketBody.torque);
-    // }
-
+ 
 
 
     const altitude = distance - earthRadius
@@ -125,28 +190,6 @@ function animate() {
 
     let thrust;
 
-
-    // if (time>100 && Math.abs(angleToTangent) > 5 ){
-    //     thrust = new CANNON.Vec3( (angleToTangent)*0.007 , 100000,0);
-    // } 
-    // // else if (time > 100) {
-    // //     thrust = new CANNON.Vec3(0,150000,0);
-    // // } 
-    // else if (time>200) {
-    //     thrust = new CANNON.Vec3(0, 300000,0);
-    // } else if (time>0) {
-    //     thrust = new CANNON.Vec3(0, 80000,0);
-    // }
-
-    // if (time>0 && time<150){
-    //     thrust = new CANNON.Vec3(0,80000,0);
-    // } else if (time>100 && time < 250 && Math.abs(angleToTangent)>5){
-    //     thrust = new CANNON.Vec3( (angleToTangent)*0.007 , 100000,0);
-    // } else if (time > 250 && Math.abs(angleToTangent)>5){
-    //     thrust = new CANNON.Vec3( (angleToTangent)*0.007 , 200000,0);
-    // } else {
-    //     thrust = new CANNON.Vec3( 0 , 350000,0);
-    // }
 
     if (altitude < 80){
         thrust = new CANNON.Vec3(0,80000,0);
@@ -174,12 +217,15 @@ function animate() {
     rocketBody.applyLocalForce(thrust, thrustPoint);
 
 
-    rocketMesh.position.copy(rocketBody.position);
-    rocketMesh.quaternion.copy(rocketBody.quaternion);
+    ship.position.copy(rocketBody.position);
+    ship.quaternion.copy(rocketBody.quaternion);
+    booster.position.copy(rocketBody.position);
+    booster.quaternion.copy(rocketBody.quaternion);
 
-    camera.position.copy(rocketMesh.position).add(new THREE.Vector3(0, 0, 1));
-    camera.lookAt(rocketMesh.position);
+    camera.position.copy(ship.position).add(new THREE.Vector3(0, 0, 0.3));
+    camera.lookAt(ship.position);
 
+    console.log(ship.position.x, booster.position.x);
   
     renderer.render(scene, camera);
 
