@@ -222,7 +222,7 @@ function animate() {
     booster.position.copy(rocketBody.position);
     booster.quaternion.copy(rocketBody.quaternion);
 
-    camera.position.copy(ship.position).add(new THREE.Vector3(0, 0, 0.3));
+    camera.position.copy(ship.position).add(new THREE.Vector3(0, 0, 1));
     camera.lookAt(ship.position);
 
     console.log(ship.position.x, booster.position.x);
