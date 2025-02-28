@@ -26,7 +26,7 @@ Clone the repo, and start a web server either with npx or python.
 
 - [x] Basic launch and separation animation
 - [ ] Booster return and catch sequence
-- [ ] Ship orbiting
+- [x] Ship orbiting
 - [ ] Gamify booster catch
 - [ ] Realistic Physics
 - [ ] Sound effects and beautification (maybe)
