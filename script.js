@@ -25,6 +25,20 @@ sky.position.set(0, 0, 0);
 scene.add(sky);
 
 
+const horizonR = 100000; 
+const horizonGeom = new THREE.SphereGeometry(horizonR, 64, 64);
+const horizonTexture = textureLoader.load('horizon.png');
+const horizonMaterial = new THREE.MeshPhongMaterial({
+    map: horizonTexture,
+    side: THREE.DoubleSide,
+    transparent: true,
+});
+const horizon = new THREE.Mesh(horizonGeom, horizonMaterial);
+horizon.position.set(0, 0, 0);
+scene.add(horizon);
+
+horizon.opacity = 0;
+
 const controls = new OrbitControls( camera, renderer.domElement );
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
@@ -33,7 +47,7 @@ const world = new CANNON.World();
 world.gravity.set(0, 0, 0); 
 
 
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.05);
+const ambientLight = new THREE.AmbientLight(0xffffff, 1);
 scene.add(ambientLight);
 
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
@@ -184,6 +198,10 @@ function animate() {
     console.log("Altitude:", altitude, "km");
     console.log("Velocity:", velocity, "km/s");
     console.log("Time:", time, "s");
+
+
+    horizonMaterial.opacity = THREE.MathUtils.clamp(1.0 - (altitude / 100.0), 0.0, 1.0);
+
 
     // force is in kg km/s2
     // acceleration in km/s2
