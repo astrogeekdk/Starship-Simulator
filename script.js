@@ -27,11 +27,15 @@ scene.add(sky);
 
 const horizonR = 100000; 
 const horizonGeom = new THREE.SphereGeometry(horizonR, 64, 64);
-const horizonTexture = textureLoader.load('horizon.png');
+// const horizonTexture = textureLoader.load('horizon.png');
 const horizonMaterial = new THREE.MeshPhongMaterial({
-    map: horizonTexture,
+    // map: horizonTexture,
     side: THREE.DoubleSide,
     transparent: true,
+    color: 0x009df7,
+    emissive: 0x0000ff,
+    emissiveIntensity: 0.5,
+    shininess: 10,
 });
 const horizon = new THREE.Mesh(horizonGeom, horizonMaterial);
 horizon.position.set(0, 0, 0);
