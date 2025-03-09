@@ -16,10 +16,12 @@ const textureLoader = new THREE.TextureLoader();
 const skyR = 1000000; 
 const skyGeom = new THREE.SphereGeometry(skyR, 64, 64);
 const skyTexture = textureLoader.load('starmap.png');
-const skyMaterial = new THREE.MeshPhongMaterial({
+const skyMaterial = new THREE.MeshBasicMaterial({
     map: skyTexture,
     side: THREE.DoubleSide,
+    color: new THREE.Color(0.1, 0.1, 0.1)
 });
+
 const sky = new THREE.Mesh(skyGeom, skyMaterial);
 sky.position.set(0, 0, 0);
 scene.add(sky);
@@ -27,15 +29,11 @@ scene.add(sky);
 
 const horizonR = 100000; 
 const horizonGeom = new THREE.SphereGeometry(horizonR, 64, 64);
-// const horizonTexture = textureLoader.load('horizon.png');
+const horizonTexture = textureLoader.load('horizon.png');
 const horizonMaterial = new THREE.MeshPhongMaterial({
-    // map: horizonTexture,
+    map: horizonTexture,
     side: THREE.DoubleSide,
     transparent: true,
-    color: 0x009df7,
-    emissive: 0x0000ff,
-    emissiveIntensity: 0.5,
-    shininess: 10,
 });
 const horizon = new THREE.Mesh(horizonGeom, horizonMaterial);
 horizon.position.set(0, 0, 0);
@@ -51,11 +49,11 @@ const world = new CANNON.World();
 world.gravity.set(0, 0, 0); 
 
 
-const ambientLight = new THREE.AmbientLight(0xffffff, 1);
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
 scene.add(ambientLight);
 
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-directionalLight.position.set(10, 10, 10);
+directionalLight.position.set(100, 100, 100);
 scene.add(directionalLight);
 
 
@@ -63,6 +61,9 @@ scene.add(directionalLight);
 const earthRadius = 6371; 
 const earthMass = 5.972e24; 
 const G = 6.6743e-20;
+
+
+
 
 const earthTexture = textureLoader.load('earth_day.jpg')
 const earthMaterial = new THREE.MeshPhongMaterial({
@@ -74,6 +75,7 @@ const earthMesh = new THREE.Mesh(earthGeometry, earthMaterial);
 
 earthMesh.position.set(0, -earthRadius, 0);
 scene.add(earthMesh);
+
 
 
 const earthShape = new CANNON.Sphere(earthRadius);
@@ -204,7 +206,7 @@ function animate() {
     console.log("Time:", time, "s");
 
 
-    horizonMaterial.opacity = THREE.MathUtils.clamp(1.0 - (altitude / 100.0), 0.0, 1.0);
+    horizonMaterial.opacity = 0; //THREE.MathUtils.clamp(1.0 - (altitude / 100.0), 0.0, 1.0);
 
 
     // force is in kg km/s2
@@ -244,8 +246,11 @@ function animate() {
     booster.position.copy(rocketBody.position);
     booster.quaternion.copy(rocketBody.quaternion);
 
-    camera.position.copy(ship.position).add(new THREE.Vector3(0, 0, 1));
+    camera.position.copy(ship.position).add(new THREE.Vector3(0.2, 0.1, 0));
     camera.lookAt(ship.position);
+    camera.rotation.z = Math.PI / 2;
+
+
 
     console.log(ship.position.x, booster.position.x);
   
