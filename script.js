@@ -102,21 +102,32 @@ earthMesh.rotateY(THREE.MathUtils.degToRad(-9))
 // scene.add(rocketMesh);
 
 
-// const rocketShape = new CANNON.Cylinder(0.01, 0.01, 0.1, 32);
-// const rocketBody = new CANNON.Body({
-//     mass: 5000e3,
-//     position: new CANNON.Vec3(0, 1, 0)
-// });
-// rocketBody.addShape(rocketShape);
-// world.addBody(rocketBody);
-
-const starshipShape = new CANNON.Cylinder(0.01, 0.01, 0.1, 32);
+const rocketShape = new CANNON.Cylinder(0.01, 0.01, 0.1, 32);
 const rocketBody = new CANNON.Body({
     mass: 5000e3,
-    position: new CANNON.Vec3(0, 0.025, 0)
+    position: new CANNON.Vec3(0, 0.02, 0)
 });
-rocketBody.addShape(starshipShape)
+rocketBody.addShape(rocketShape);
 world.addBody(rocketBody);
+
+// const boosterShape = new CANNON.Cylinder(0.01, 0.01, 0.059, 32);
+// const boosterBody = new CANNON.Body({
+//     mass: 3000e3,
+//     position: new CANNON.Vec3(0, 0.02, 0)
+// });
+// boosterBody.addShape(boosterShape)
+// world.addBody(boosterBody);
+
+
+// const shipShape = new CANNON.Cylinder(0.01, 0.01, 0.044, 32);
+// const shipBody = new CANNON.Body({
+//     mass: 2000e3,
+//     position: new CANNON.Vec3(0, 0.02+0.059, 0)
+// });
+// shipBody.addShape(shipShape);
+// world.addBody(shipBody);
+
+
 
 const loader = new GLTFLoader();
 
@@ -126,7 +137,7 @@ let boosterHeight;
 
 loader.load('launchtower.glb', (gltf) => {
     tower = gltf.scene;
-    tower.scale.set(0.0035, 0.0035, 0.0035);
+    tower.scale.set(0.003, 0.003, 0.003);
     const box = new THREE.Box3().setFromObject(tower);
     console.log("tower height", box.max.y - box.min.y);
     scene.add(tower);
@@ -134,8 +145,6 @@ loader.load('launchtower.glb', (gltf) => {
     // tower.position.set(0,-1,0);
 });
 
-// const debugLine = new THREE.ArrowHelper(offset.normalize(), booster.position, 5, 0xffff00);
-// scene.add(debugLine);
 
 loader.load('booster.glb', (gltf) => {
     booster = gltf.scene;
@@ -153,8 +162,8 @@ loader.load('booster.glb', (gltf) => {
         }
     });
 
-    const offsetFromBase = 0.025
-    booster.scale.set(0.005, 0.005, 0.005);
+    const offsetFromBase = 0.02
+    booster.scale.set(0.0045, 0.0045, 0.0045);
 
     const box = new THREE.Box3().setFromObject(booster);
     boosterHeight = box.max.y - box.min.y;
@@ -178,7 +187,7 @@ loader.load('booster.glb', (gltf) => {
 
         scene.add(ship);
 
-        ship.scale.set(0.005, 0.005, 0.005);
+        ship.scale.set(0.0045, 0.0045, 0.0045);
         ship.rotation.set(0, Math.PI / 2, 0);
 
         const shipBox = new THREE.Box3().setFromObject(ship);
@@ -197,17 +206,11 @@ loader.load('booster.glb', (gltf) => {
         camera.lookAt(ship.position);
 
 
+        
+        
+
     });
 });
-
-
-
-
-
-
-
-
-
 
 let time = 0;
 
@@ -225,6 +228,7 @@ function animate() {
     const gravForceMagnitude = (G * earthMass * rocketBody.mass) / (distance * distance);
     const gravForce = rVec.unit().scale(-gravForceMagnitude); // Direction toward Earth
     rocketBody.force.vadd(gravForce, rocketBody.force);
+
 
 
 
@@ -247,9 +251,9 @@ function animate() {
     const altitude = distance - earthRadius
     const velocity = rocketBody.velocity.norm();
 
-    // console.log("Altitude:", altitude, "km");
-    // console.log("Velocity:", velocity, "km/s");
-    // console.log("Time:", time, "s");
+    console.log("Altitude:", altitude, "km");
+    console.log("Velocity:", velocity, "km/s");
+    console.log("Time:", time, "s");
 
 
     // horizonMaterial.opacity = 0; //THREE.MathUtils.clamp(1.0 - (altitude / 100.0), 0.0, 1.0);
@@ -283,23 +287,27 @@ function animate() {
         thrust = new CANNON.Vec3(0, 10000, 0);
     }
 
-    const thrustPoint = new CANNON.Vec3(0, -0.033, 0);
+    const thrustPoint = new CANNON.Vec3(0, -0.05, 0);
     rocketBody.applyLocalForce(thrust, thrustPoint);
 
 
-    const offset = new THREE.Vector3(0, boosterHeight, 0);
-    offset.applyQuaternion(booster.quaternion);
-    const newPosition = booster.position.clone().add(offset);
+    const boosterUp = new THREE.Vector3(0, 1, 0);
+    boosterUp.applyQuaternion(booster.quaternion);
+    const offset = boosterUp.multiplyScalar(boosterHeight);
+    ship.position.copy(rocketBody.position).add(offset);
 
+    // const offset = new THREE.Vector3(0, boosterHeight, 0);
+    // offset.applyQuaternion(booster.quaternion);
+    // ship.position.copy(rocketBody.position).add(offset);
 
-    ship.position.copy(newPosition);
+    // ship.position.copy(rocketBody.position);
     ship.quaternion.copy(rocketBody.quaternion);
 
     booster.position.copy(rocketBody.position);
     booster.quaternion.copy(rocketBody.quaternion);
 
     // camera.position.copy(ship.position).add(new THREE.Vector3(0.3, 0.3, 0));
-    camera.position.copy(booster.position).add(new THREE.Vector3(-0.1, 0.1, 0.1));
+    camera.position.copy(booster.position).add(new THREE.Vector3(0, 0, 1));
     camera.lookAt(booster.position);
     // camera.rotation.z = Math.PI / 2;
 
