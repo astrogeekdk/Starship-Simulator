@@ -19,10 +19,10 @@ world.gravity.set(0, -9.81, 0);
 
 
 const rocketGeometry = new THREE.CylinderGeometry(0.5, 0.5, 6, 32);
-const rocketMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+const rocketMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
 const rocketMesh = new THREE.Mesh(rocketGeometry, rocketMaterial);
 scene.add(rocketMesh);
-
+rocketMesh.position.set(0,3,0)
 
 const rocketShape = new CANNON.Cylinder(0.5, 0.5, 6, 32);
 const rocketBody = new CANNON.Body({
@@ -32,6 +32,25 @@ const rocketBody = new CANNON.Body({
 rocketBody.addShape(rocketShape);
 world.addBody(rocketBody);
 
+
+
+const shipGeometry = new THREE.CylinderGeometry(0.5, 0.5, 4, 32);
+const shipMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+const shipMesh = new THREE.Mesh(shipGeometry, shipMaterial);
+shipMesh.position.set(0,9,0);
+scene.add(shipMesh);
+
+
+const shipShape = new CANNON.Cylinder(0.5, 0.5, 4, 32);
+const shipBody = new CANNON.Body({
+    mass: 1,
+    position: new CANNON.Vec3(0, 10, 0)
+});
+shipBody.addShape(shipShape);
+world.addBody(shipBody);
+
+shipBody.quaternion.copy(shipMesh.quaternion);
+rocketBody.quaternion.copy(rocketMesh.quaternion);
 
 const groundGeometry = new THREE.PlaneGeometry(100, 100);
 const groundMaterial = new THREE.MeshBasicMaterial({ color: 0x212121 });
@@ -50,11 +69,13 @@ groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
 world.addBody(groundBody);
 
 
-camera.position.set(0, 5, 10);
+camera.position.set(0, 10, 20);
 camera.lookAt(0,0,0);
 
 
 let time = 0;
+
+
 
 function animate() {
     requestAnimationFrame(animate);
@@ -65,18 +86,28 @@ function animate() {
 
     let thrust;
 
-    if (time>3 && time<5){
-        thrust = new CANNON.Vec3(0.01,12,0);
-    } else {
-        thrust = new CANNON.Vec3(0,12,0);
-    }
+    // if (time>3 && time<5){
+    //     thrust = new CANNON.Vec3(0.01,12,0);
+    // } else {
+    //     thrust = new CANNON.Vec3(0,12,0);
+    // }
     
+    thrust = new CANNON.Vec3(0,13,0);
+
     const thrustPoint = new CANNON.Vec3(0,-3,0);
-    rocketBody.applyLocalForce(thrust, thrustPoint);
+    // rocketBody.applyLocalForce(thrust, thrustPoint);
+
+
+    // rocketMesh.position.copy(rocketBody.position);
+    // rocketMesh.quaternion.copy(rocketBody.quaternion);
 
 
     rocketMesh.position.copy(rocketBody.position);
     rocketMesh.quaternion.copy(rocketBody.quaternion);
+
+    shipMesh.position.copy(shipBody.position);
+    shipMesh.quaternion.copy(shipBody.quaternion);
+
 
     renderer.render(scene, camera);
 
