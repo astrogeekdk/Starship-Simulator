@@ -7,3 +7,85 @@ body {
     width: 100vw;
     height: 100vh;
 }
+
+#ui{
+    /* visibility: hidden; */
+    box-sizing: border-box;
+    padding: 10px 10px;
+    width: 100vw;
+    background-color: #00000025;
+    font-family: "Bebas Neue";
+    color: white;
+    position: absolute;
+    bottom: 10px;
+    display: flex;
+    flex-direction: row;
+}
+
+.flex{
+    display: flex;
+    flex-direction: column;
+    width: 33%;
+}
+
+.booster{
+    padding: 0px 20px;
+    align-items: start;
+    justify-content: center;
+}
+
+.main{
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+    margin: 10px 0px;
+}
+
+.ship{
+    padding: 0px 20px;
+    align-items: start;
+    justify-content: center;
+}
+
+.telemetry{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+}
+
+.telemetry-row{
+    display: flex;
+    justify-content: space-between;
+}
+
+.label{
+    text-align: left;
+}
+
+.value{
+    text-align: right;
+}
+
+button{
+    
+    font-family: "Bebas Neue";
+    padding: 10px 20px;
+    margin-top: 10px;
+    background-color: transparent;
+    border: none;
+    color: white;
+    cursor: pointer;
+    border: 1px solid white;
+}
+
+h1, h2{
+    margin: 0;
+    margin-bottom: 10px;
+}
+
+.cameras{
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+}
