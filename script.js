@@ -275,12 +275,13 @@ CannonDebugRenderer.prototype = {
 };
 
 
-
+    
 
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 100000000);
-const renderer = new THREE.WebGLRenderer();
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 100000000);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.getElementById('container').appendChild(renderer.domElement);
 
@@ -300,22 +301,11 @@ sky.position.set(0, 0, 0);
 scene.add(sky);
 
 
-// const horizonR = 100000; 
-// const horizonGeom = new THREE.SphereGeometry(horizonR, 64, 64);
-// const horizonTexture = textureLoader.load('horizon.png');
-// const horizonMaterial = new THREE.MeshPhongMaterial({
-//     map: horizonTexture,
-//     side: THREE.DoubleSide,
-//     transparent: true,
-// });
-// const horizon = new THREE.Mesh(horizonGeom, horizonMaterial);
-// horizon.position.set(0, 0, 0);
-// scene.add(horizon);
-// horizon.opacity = 0;
-
 const controls = new OrbitControls(camera, renderer.domElement);
-// controls.enableDamping = true;
-// controls.dampingFactor = 0.05;
+controls.enableDamping = true;
+controls.dampingFactor = 0.1;
+controls.minDistance = 0.1;
+controls.maxDistance = 2;
 
 
 
@@ -339,7 +329,7 @@ const earthMass = 5.972e24;
 const G = 6.6743e-20;
 
 const axesHelper = new THREE.AxesHelper(500);
-scene.add(axesHelper);
+// scene.add(axesHelper);
 
 
 const earthTexture = textureLoader.load('1_earth_8k.jpg');
@@ -385,13 +375,6 @@ world.addBody(earthBody);
 
 earthMesh.rotateX(THREE.MathUtils.degToRad(-63))
 earthMesh.rotateY(THREE.MathUtils.degToRad(-9))
-
-
-
-
-
-
-
 
 
 
@@ -460,22 +443,9 @@ renderer.autoClear = false;
 // composer.addPass(bloomPass);
   
 
+
 const offsetOfBoosterFromBase = 0.02;
 
-
-// const rocketGeometry = new THREE.CylinderGeometry(0.01, 0.01, 0.1, 32);
-// const rocketMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
-// const rocketMesh = new THREE.Mesh(rocketGeometry, rocketMaterial);
-// scene.add(rocketMesh);
-
-
-// const rocketShape = new CANNON.Cylinder(0.01, 0.01, 0.1, 32);
-// const rocketBody = new CANNON.Body({
-//     mass: 5000e3,
-//     position: new CANNON.Vec3(0, 0.02, 0)
-// });
-// rocketBody.addShape(rocketShape);
-// world.addBody(rocketBody);
 
 const boosterShape = new CANNON.Cylinder(0.005, 0.005, 0.069, 32);
 const boosterBody = new CANNON.Body({
@@ -488,7 +458,7 @@ world.addBody(boosterBody);
 
 const shipShape = new CANNON.Cylinder(0.005, 0.005, 0.046, 32);
 const shipBody = new CANNON.Body({
-    mass: 2000e3,
+    mass: 500e3,
     position: new CANNON.Vec3(0, offsetOfBoosterFromBase+0.069+0.047/2, 0)
 });
 shipBody.addShape(shipShape);
@@ -498,9 +468,14 @@ shipBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
 boosterBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
 
 
+
 const c = new CANNON.LockConstraint(boosterBody, shipBody);
 world.addConstraint(c);
 
+
+
+let allCam = ["Booster", "Ship", "Base", "Tower"]
+let cam = allCam[2];
 
 const loader = new GLTFLoader();
 
@@ -564,24 +539,35 @@ loader.load('booster2.glb', (gltf) => {
         const totalHeight = boosterHeight + shipHeight;
         console.log("total height", totalHeight);
 
-        // camera.position.copy(shipModel.position).add(new THREE.Vector3(0, 0.2, 0.2));
-        // camera.lookAt(shipModel.position);
+        camera.position.copy(shipModel.position).add(new THREE.Vector3(0, 0.2, 0.2));
+        camera.lookAt(shipModel.position);
         
 
     });
 });
 
 
-        camera.position.set(10000,10000,10000);
-        camera.lookAt(0,0,0);
+// const flameGeometry = new THREE.CylinderGeometry(0.005, 0.001, 0.07, 16);
+// const flameMaterial = new THREE.MeshBasicMaterial({
+//   color: 0xff4500, // Orange-red color
+//   transparent: true,
+//   opacity: 0.7,
+// });
+// const flame = new THREE.Mesh(flameGeometry, flameMaterial);
+// // flame.rotation.x = Math.PI;
+// flame.position.set(0, -2, 0); // Assuming rocket is at (0, 0, 0), adjust Y as needed
+// scene.add(flame);
+
+
 
 
 let time = 0;
 let seperated = false;
+let doneBoostback = false;
 
 
 function calculateGravitationalForce(body1, body2) {
-    const rVec = body1.position.vsub(body2.position); 
+    const rVec = body1.position.clone().vsub(body2.position); 
     const distance = rVec.norm();
     const gravForceMagnitude = (G * body1.mass * body2.mass) / (distance * distance);
     const gravForce = rVec.unit().scale(-gravForceMagnitude);
@@ -590,27 +576,128 @@ function calculateGravitationalForce(body1, body2) {
 }
 
 
+
+// console.log(world.solver);
+world.solver.iterations = 10;  //very very important
+// world.solver.tolerance = 0;
+
+
+
+
+const particleCount = 1000;
+const geometry = new THREE.BufferGeometry();
+const vertices = new Float32Array(particleCount * 3);
+for (let i = 0; i < vertices.length; i += 3) {
+    vertices[i] = (Math.random() - 0.5) * 0.005;  // -5 5
+    vertices[i + 1] = (Math.random() - 1) * 0.05;
+    vertices[i + 2] = (Math.random() - 0.5) * 0.005; // -5 5
+}
+geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+
+
+const colors = new Float32Array(particleCount * 4);
+for (let i = 0; i < colors.length; i += 4) {
+    colors[i] = 0;
+    colors[i + 1] = 0;
+    colors[i + 2] = 0;
+    colors[i + 3] = 1;
+}
+geometry.setAttribute('color', new THREE.BufferAttribute(colors, 4));
+
+const material = new THREE.PointsMaterial({
+    size: 1,           // Size of each particle
+    color: 0xffffff,     // Particle color
+    transparent: true,   // Enable transparency if needed
+    opacity: 1,
+    sizeAttenuation: false,
+    vertexColors: true,
+});
+
+const particleSystem = new THREE.Points(geometry, material);
+scene.add(particleSystem);
+
+const timeAfterSeperation = 0;
+
+
+function getDist(obj1, obj2){
+    return obj1.position.sub(obj2.position);
+}
+
+let threeInitial, targetQuaternion;
+let t = 0;
+let t2 = 0;
+const speed = 0.005;
+let oriented = false;
+
+let initial;
+
+
+
+// renderer.render(scene, camera);
+
+const boosterCam = document.getElementById("booster-cam");
+const shipCam = document.getElementById("ship-cam");
+const baseCam = document.getElementById("base-cam");
+const towerCam = document.getElementById("tower-cam");
+
+boosterCam.addEventListener("click", function(){
+    cam = allCam[0];
+});
+
+shipCam.addEventListener("click", function(){
+    cam = allCam[1];
+});
+
+baseCam.addEventListener("click", function(){
+    cam = allCam[2];
+});
+
+towerCam.addEventListener("click", function(){
+    cam = allCam[3];
+});
+
+let boostbackTime = 0;
+
+
+
+
+let getSlerp = false;
+
 function animate() {
+
+
     requestAnimationFrame(animate);
 
-    world.step(1 / 10);
-    time += 1 / 10;
 
-    // const fastForwardFactor = 10; // Simulate 10x faster
-    // const baseTimestep = 1/60; // Stable timestep
+    
+
+
+    // world.step(1 / 10);
+
+ 
+   
+
+    const fastForwardFactor = 1; // Simulate 10x faster
+    const baseTimestep = 1/60; // Stable timestep
     // for (let i = 0; i < fastForwardFactor; i++) {
-    // world.step(baseTimestep); // Multiple small steps
+    world.step(baseTimestep); // Multiple small steps
+    time += baseTimestep;
     // }
+
 
 
     const gravForceBooster = calculateGravitationalForce(boosterBody, earthBody)
     const magAdjusted = new CANNON.Vec3(gravForceBooster.x, gravForceBooster.z, gravForceBooster.y);
-    boosterBody.applyLocalForce(magAdjusted, new CANNON.Vec3(0,0,0));
+    boosterBody.applyForce(gravForceBooster, boosterBody.position);
 
     const gravForceShip = calculateGravitationalForce(shipBody, earthBody)
     const magAdjusted2 = new CANNON.Vec3(gravForceShip.x, gravForceShip.z, gravForceShip.y);
-    shipBody.applyLocalForce(magAdjusted2, new CANNON.Vec3(0,0,0));
+    shipBody.applyForce(gravForceShip, shipBody.position);
 
+    boosterBody.linearDamping = 0.001;
+    boosterBody.angularDamping = 0.1;
+    shipBody.linearDamping = 0.001;
+    shipBody.angularDamping = 0.1;
 
     // console.log(magAdjusted);
     // console.log(magAdjusted2);
@@ -630,49 +717,137 @@ function animate() {
     const shipDistance = shipBody.position.vsub(earthBody.position).norm(); 
     const boosterAltitude = boosterDistance - earthRadius;
     const shipAltitude = shipDistance - earthRadius;
-    const velocity = shipBody.velocity.norm();
+    const shipVelocity = shipBody.velocity.norm();
+    const boosterVelocity = boosterBody.velocity.norm();
 
+    const axesHelper = new THREE.AxesHelper(10);
+
+    // Attach the AxesHelper to the cube
+    // boosterModel.add(axesHelper);
+    
 
     let boosterThrust;
     let shipThrust;
 
 
-    if ( boosterAltitude<80 && !seperated){
+    particleSystem.visible = false;
 
-        boosterThrust = new CANNON.Vec3(0, 0, 100000);
+
+
+    const d = getDist(boosterModel, shipModel);
+    // console.log(d.length())
+
+    if(seperated && d.length()>0.5 && !doneBoostback){
+        console.log("doing boostback");
+
+        const toLandingSite = towerModel.position.clone().sub(boosterModel.position).normalize().negate();
+        const upVec = new THREE.Vector3(0,1,0);
+        const targetDirection = new THREE.Vector3().addVectors(toLandingSite.multiplyScalar(0.7), upVec.multiplyScalar(0.3)).normalize(); 
+    
+        const forwardVec = new THREE.Vector3(0,0,1);
+        targetQuaternion = new THREE.Quaternion();
+        targetQuaternion.setFromUnitVectors(forwardVec, targetDirection);
+    
+
+
+        const initialQuaternion = boosterModel.quaternion;
+        threeInitial = new THREE.Quaternion(
+            initialQuaternion.x,
+            initialQuaternion.y,
+            initialQuaternion.z,
+            initialQuaternion.w
+          );
+        
+  
+        doneBoostback = true;
+
+    }
+
+    if(doneBoostback){
+    t = Math.min(t + speed, 1);
+    const tempQ = threeInitial.clone();
+    tempQ.slerp(targetQuaternion, t);
+    boosterBody.quaternion.set(
+        tempQ.x,
+        tempQ.y,
+        tempQ.z,
+        tempQ.w
+      );
+    }
+
+    console.log(t);
+
+    if(t>0.999 && boostbackTime<40){
+        console.log("boostback fire");
+        boosterBody.applyLocalForce(new CANNON.Vec3(0, 0, 50000), new CANNON.Vec3(0,0,-0.069/2))
+        particleSystem.visible = true;
+        boostbackTime+=baseTimestep;
+    }
+
+   
+
+    if(seperated && boosterAltitude<60){
+
+        if(!getSlerp){
+            initial = boosterModel.quaternion;
+            getSlerp = true;
+        }
+
+        t2 = Math.min(t2 + speed, 1);
+        const upDir = new THREE.Quaternion().setFromAxisAngle(new CANNON.Vec3(-1, 0, 0), Math.PI / 2);
+        initial.slerp(upDir, t2);
+        boosterBody.quaternion.set(
+            initial.x,
+            initial.y,
+            initial.z,
+            initial.w
+          );
+
+    }
+
+
+    if (boosterAltitude<60 && !seperated){
+        console.log("upthrust fire");
+        boosterThrust = new CANNON.Vec3(0, 10, 70000);
         boosterBody.applyLocalForce(boosterThrust, new CANNON.Vec3(0,0,-0.069/2))
+        particleSystem.visible = true;
+
 
 
     } else {
         if(world.constraints.indexOf(c)!=-1){
+            // flame.visible = false;
             world.removeConstraint(c);
             console.log("Stage Sep");
             seperated = true;
+            // const separationForce = new CANNON.Vec3(0, 0, -10000); // Push booster down
+            // boosterBody.applyLocalForce(separationForce, new CANNON.Vec3(0, 0, 0.069 / 2));
+            // const shipSeparation = new CANNON.Vec3(0, 0, 10000); // Push ship up
+            // shipBody.applyLocalForce(shipSeparation, new CANNON.Vec3(0, 0, -0.046 / 2));
         }
 
 
 
         if (shipAltitude < 200) {
-            shipThrust = new CANNON.Vec3(0, 0, 50000);
+            shipThrust = new CANNON.Vec3(0, 0, 15000);
         } else if (shipAltitude < 400) { 
-            shipThrust = new CANNON.Vec3(0, 0, 40000);
+            shipThrust = new CANNON.Vec3(0, 0, 1000);
         } else if (shipAltitude > 400) {
-            shipThrust = new CANNON.Vec3(0, 0, 25000);
+            shipThrust = new CANNON.Vec3(0, 0, 100);
         }
     
         if (Math.abs(angleToTangent) > 5) {
-            const rollThrust = new CANNON.Vec3(0, (angleToTangent)*0.07 , 0);
+            const rollThrust = new CANNON.Vec3(0, (angleToTangent)*1 , 0);
             shipThrust.vadd(rollThrust, shipThrust);
-            console.log(angleToTangent);
+
         }
     
-        if (velocity < 7) {
-            const moreThrust = new CANNON.Vec3(0, 0, 1000);
+        if (shipVelocity < 7) {
+            const moreThrust = new CANNON.Vec3(0, 0, 100);
             shipThrust.vadd(moreThrust, shipThrust);
-        } else if (velocity > 9) {
-            shipThrust = new CANNON.Vec3(0, 0, 1000);
+        } else if (shipVelocity > 9) {
+            shipThrust = new CANNON.Vec3(0, 0, 100);
         }
-        console.log("Ship Thrust", shipThrust);
         shipBody.applyLocalForce(shipThrust, new CANNON.Vec3(0,0,-0.046/2))
 
 
@@ -680,6 +855,10 @@ function animate() {
 
 
     }
+
+
+
+
 
 
 
@@ -732,52 +911,196 @@ function animate() {
 
         // shipModel.position.copy(boosterBody.position).add(offset);
 
-        const boosterUp = new THREE.Vector3(0, 1, 0);
-        boosterUp.applyQuaternion(shipModel.quaternion);
-        const offset = boosterUp.multiplyScalar(0.01);
-        const adjusted = new THREE.Vector3(offset.x, offset.y, offset.z);
-        shipModel.position.copy(shipBody.position);//.add(adjusted);
+
+        // shipModel.position.copy(shipBody.position);//.add(adjusted);
         // console.log("offset", adjusted);
         // const offset = new THREE.Vector3(0, boosterHeight, 0);
         // offset.applyQuaternion(booster.quaternion);
-        // ship.position.copy(rocketBody.position).add(offset);
+        // ship.position.copy(rocketBody.position)//.add(offset);
     
-        // ship.position.copy(rocketBody.position);
-        shipModel.quaternion.copy(shipBody.quaternion);
-
-
+       
     boosterModel.position.copy(boosterBody.position);//.add(new THREE.Vector3(0,0,0));
     boosterModel.quaternion.copy(boosterBody.quaternion);
 
+    // const boosterUp = new THREE.Vector3(0, 1, 0);
+    // boosterUp.applyQuaternion(shipModel.quaternion);
+    // const offset = boosterUp.multiplyScalar(0.01);
+    // const adjusted = new THREE.Vector3(offset.x, offset.z, offset.y);
+
+    // Assuming shipBody is your Cannon.js body and shipModel is your Three.js mesh
 
 
+    // Step 1: Define the local offset in Three.js space (Y-up)
+    // We want to shift "down" in the model's local Y-axis, so use negative Y
+    const localOffset = new THREE.Vector3(0, 0, -0.007); // -0.01 units along local -Y
+
+    // Step 2: Apply the model's quaternion to transform the offset to world space
+    const worldOffset = localOffset.clone().applyQuaternion(shipModel.quaternion);
+
+    // Step 3: Sync Three.js model position with Cannon.js body position, then add offset
+    shipModel.position.copy(shipBody.position).add(worldOffset);
+
+    // Step 4: Sync quaternion (no change needed here)
+    shipModel.quaternion.copy(shipBody.quaternion);
+    shipModel.rotation.z += 3.14;
+
+
+
+
+
+
+
+    for (let i = 0; i < particleCount; i += 1) {
+
+        const p = i*3
+        if(vertices[p+1]<-0.1){
+            vertices[p + 1] = (Math.random() - 1) * 0.05;
+        }
+
+        // positions[i] += (Math.random() - 0.5);     // Update x
+        vertices[p + 1] -= Math.random() * 0.01; // Update y
+        // positions[i + 2] += (Math.random() - 0.5); // Update z
+
+        const c = i*4
+        colors[c] = 1; 
+        colors[c + 1] = .86; 
+        colors[c + 2] = .16; 
+        colors[c + 3] = 1;
+
+    }
+
+    particleSystem.geometry.attributes.position.needsUpdate = true;
+    particleSystem.geometry.attributes.color.needsUpdate = true;
+    particleSystem.position.copy(boosterModel.position);
+    particleSystem.quaternion.copy(boosterModel.quaternion);
+
+    const offsetRotation = new THREE.Quaternion();
+    offsetRotation.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+    particleSystem.quaternion.multiply(offsetRotation);
+
+    const downrange = boosterModel.position.sub(towerModel.position);
+
+
+    if (true) {
+    
+    
     // console.log("Booster Altitude:", boosterAltitude, "km");
     // console.log("Ship Altitude:", shipAltitude, "km");
     // console.log("Velocity:", velocity, "km/s");
-    console.log("Booster Force:", boosterBody.force, "km/s");
+    // console.log("Booster Force:", boosterBody.force, "km/s");
     // console.log("Ship Force:", shipBody.force, "km/s");
     // console.log("Angle:", angleToTangent);
-    // console.log("Downrange:", boosterModel.position.sub(towerModel.position), "s");
+    // console.log("Downrange:", downrange, "s");
     // console.log("Time:", time, "s");
+    // console.log("Ship Thrust", shipThrust);
+    const downrangeDistance = Math.sqrt(downrange.x**2+downrange.z**2).toFixed(2)
+    document.getElementById("ship-speed").innerHTML=`${(shipVelocity*3600).toFixed(2)} KM/H`;
+    document.getElementById("booster-speed").innerHTML=`${(boosterVelocity*3600).toFixed(2)} KM/H`;
+
+    // document.getElementById("ship-speed").innerHTML=`${(velocity).toFixed(2)} KM/S`;
+    // document.getElementById("booster-speed").innerHTML=`${(velocity).toFixed(2)} KM/S`;
+
+    document.getElementById("ship-altitude").innerHTML=`${shipAltitude.toFixed(2)} KM`;
+    document.getElementById("booster-altitude").innerHTML=`${boosterAltitude.toFixed(2)} KM`;
+
+    document.getElementById("booster-downrange").innerHTML=`${downrangeDistance} KM`;
+    document.getElementById("time").innerHTML=`Time Step ${time.toFixed(0)}`;
 
 
-    // camera.position.copy(ship.position).add(new THREE.Vector3(0.3, 0.3, 0));
-    camera.position.copy(boosterModel.position).add(new THREE.Vector3(0.3, 0, 0));
-    camera.lookAt(boosterModel.position);
+    }
+
+
+ 
+
+    if(seperated && boosterAltitude<50){
+        console.log("hover fire");
+
+        const velX = boosterBody.velocity.x;
+        const velY = boosterBody.velocity.y;
+        const velZ = boosterBody.velocity.z;
+    
+        console.log("vel", velX, velY, velZ);
+
+        const targetAltitude = offsetOfBoosterFromBase;
+        const altitudeError = boosterAltitude - targetAltitude;
+        const desiredThrust = 30000;
+        const thrustP = altitudeError*500
+        const thrustD = velY * -20000;
+        let thrust = desiredThrust + thrustP + thrustD;
+
+        thrust = Math.max(20000, Math.min(70000, thrust));
+
+
+
+        const lateralGain = boosterAltitude > 10 ? 0.1 : 0.5;
+        const sideerrx = -downrange.x * lateralGain -  velX * 0.2;
+        const sideerrz = -downrange.z * lateralGain -  velZ * 0.2;
+
+        console.log("thrust", velX*10, thrust, velZ*10);
+
+        boosterBody.applyLocalForce(new CANNON.Vec3(0, 0, thrust), new CANNON.Vec3(0,0,-0.069/2))
+        boosterBody.applyLocalForce(new CANNON.Vec3(0, 0, 0), new CANNON.Vec3(0,0,0))
+        particleSystem.visible = true;
+    }
+
+    // frameCount++;
+
+
     // camera.rotation.z = Math.PI / 2;
     // controls.update();
     // console.log(ship.position.x, booster.position.x);
-    cannonDebugRenderer.update();      // Update the debug renderer
+    // cannonDebugRenderer.update();      // Update the debug renderer
     
     // earthMesh.layers.set(1); // Earth on layer 1
     // camera.layers.set(1); // Bloom camera sees only layer 1
     // composer.render();
     // camera.layers.set(0); // Main camera sees layer 0 (non-bloom)
+
+
+    // if(time<5){
+    //     cam = allCam[2];
+    // } else{
+    //     cam = allCam[1];
+    // }
+
+    if(cam==allCam[0]){
+        camera.position.copy(boosterModel.position).add(new THREE.Vector3(0.2, 0, 0));
+        camera.lookAt(boosterModel.position);
+    } else if(cam==allCam[1]){
+        camera.position.copy(shipModel.position).add(new THREE.Vector3(0.4, 0, 0));
+        camera.lookAt(shipModel.position);
+        // controls.target.copy(shipModel.position);
+        // controls.update();
+    } else if(cam==allCam[2]){
+        camera.position.copy(towerModel.position).add(new THREE.Vector3(0.1, 0, 0));
+        camera.lookAt(boosterModel.position);
+    } else if(cam==allCam[3]){
+        camera.position.copy(towerModel.position).add(new THREE.Vector3(0.05, 0.2, 0.05));
+        camera.lookAt(boosterModel.position);
+    }
+
+
+
+
+console.log('hahaha1');
+
     renderer.render(scene, camera);
 
-}
 
-animate();
+
+}
+let frameCount = 0;
+
+renderer.render(scene, camera);
+
+
+const start = document.getElementById("start");
+start.addEventListener("click", function(){
+    start.disabled = true;
+    animate();
+
+});
+
 
 // Handle window resize
 window.addEventListener('resize', () => {
