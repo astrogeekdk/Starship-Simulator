@@ -343,21 +343,21 @@ const earthMaterial = new THREE.MeshPhongMaterial({
 const earthGeometry = new THREE.SphereGeometry(earthRadius, 128, 128);
 const earthMesh = new THREE.Mesh(earthGeometry, earthMaterial);
 
-const clouds = textureLoader.load('2k_earth_clouds.jpg');
-const cloudMaterial = new THREE.MeshPhongMaterial({
-    map: clouds, 
-    transparent: true,
-    alphaMap: clouds,
-    side: THREE.DoubleSide,
+// const clouds = textureLoader.load('2k_earth_clouds.jpg');
+// const cloudMaterial = new THREE.MeshPhongMaterial({
+//     map: clouds, 
+//     transparent: true,
+//     alphaMap: clouds,
+//     side: THREE.DoubleSide,
     
-})
-const cloudGeometry = new THREE.SphereGeometry(earthRadius, 128, 128);
-const cloudsMesh = new THREE.Mesh(cloudGeometry, cloudMaterial);
+// })
+// const cloudGeometry = new THREE.SphereGeometry(earthRadius, 128, 128);
+// const cloudsMesh = new THREE.Mesh(cloudGeometry, cloudMaterial);
 
 
 
 earthMesh.position.set(0, -earthRadius, 0);
-cloudsMesh.position.set(0,-earthRadius-2.5,0);
+// cloudsMesh.position.set(0,-earthRadius-2.5,0);
 scene.add(earthMesh);
 // scene.add(cloudsMesh)
 
